@@ -1,0 +1,185 @@
+---
+title: "Regression as a first step to deep learning"
+author: "Dr Juan H Klopper"
+output:
+  html_document:
+    toc: true
+    number_sections: false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(plotly)
+```
+
+![](KRG_elegant_logo_for_light_BG.png)
+
+## Introduction
+
+Becoming familiar with regression is a very important first step in understanding deep learning.  It brings home the concept of a model to predict an outcome and the inherent error in the model.  The aim behind a deep neural network is to create a model to predict an outcome and to make as small an error as possible.
+
+This tutorial uses concepts familiar to anyone who has viewed material on introductory statistics.  It begins with the simplest of all models, which uses the very familiar mean (average).  It then moves on to viewing variance and standard deviation is a slightly different way before cementing the idea of a model, with its error.
+
+## The baseline model
+
+Statistical modeling infers the use of sample data to model real-world situations.  As such there is a need for the model that is created from the data to accurately reflect the real-world.
+
+In the most common-case scenario, the statistical model has as aim the prediction of an outcome.  This outcome should be a measurable variable and is referred to as a _target_.  The target data type can be either categorical or numerical.  Prediction of the target variable value is made by manipulating a set of _feature variables_.  They can likewise be categorical or numerical.
+
+The simplest way to develop an intuitive understanding of the process is to consider only the target variable.
+
+As an example, the code chunk below creates a numerical vector with $10$ elements representing the number of sales made by a medical supply company.
+
+```{r}
+sales <- c(3, 4, 2, 4, 5, 6, 3, 9, 1, 12)
+```
+
+The mean of these $10$ values is easy to create and can serve as a baseline model.  The arithmetic mean is given in equation (1).
+
+$$ \bar{X} = \frac{\sum_{i=1}^{n}x_i}{n} \tag{1}  $$
+
+Here $\bar{X}$ is the mean, $x_i$ represents each element (value) in the set and $n$ is the sample size.  The code chunk below creates an object named `mean.sales` and uses the `mean()` function to calculate the mean of the set of $10$ values.
+
+```{r}
+mean.sales <- mean(sales)
+mean.sales
+```
+
+The solution, `r mean.sales`, can serve as a predictor of the outcome.  That is, given a number of input variables, the sales can always be predicted to be $4.9$.  It is obvious that this is a poor model, since some of the values are not very close to $4.9$.  In fact, the difference between each value and the mean can be expressed by subtracting the mean from each.  The first value was $3$ and subtracting $4.9$ from it shows an error of `r 3 - 4.9`.  In the case of the last value, $12$, the error is `r 12 - 4.9`.
+
+These errors can be totaled (summed), but it should be obvious from the way that the mean is calculated, that the sum total of errors would be $0$.
+
+```{r}
+round(sum(sales - 4.9),
+      digits = 2) # Using round() to prevent rounding errors 
+```
+
+The total error should clearly __not__ be $0$.  In order to get a better idea of the total error, each difference is squared giving rise to the _sum of squared errors_ (SSE), given in equation (2) below (squaring turns each difference into a positive value).
+
+$$ \text{SSE} = \sum_{i=1}^{n}{\left( x_i - \bar{X} \right)}^{2} \tag{2} $$
+
+The $\sum$ symbols is short-hand for summing.  It states that each value that follows from the calculation of the expression (which is done over-and-over again so that all the samples are represented) is added.
+
+The code chunk below squares each difference and then adds all these squared errors.
+
+```{r}
+sum((sales - 4.9)^2)
+```
+
+This is a much better idea of how poor the baseline model (using the mean as outcome predictor) is.  One problem is that the values are squared.  This means that the units are also squared.  If the sales represented a value in weight, i.e. pounds, then the error is expressed in $\text{pounds}^2$.  This makes no sense.  A second problem arises when considering the fact that the larger the sample size, the larger the error will be. there are simply more values to be added.  Both of these problems are solved by equation (3).  The sum total is divided by one less than the sample size (a matter related to degrees of freedom) and the square root of the quotient is taken.  This gives rise to the _standard deviation_.
+
+$$ s = \sqrt{\frac{\sum_{i=1}^{n}{\left( x_i -\bar{X}  \right)}^{2}}{n-1}} \tag{3} $$
+
+Used in its un-squared version, this is off course, the _variance_.  Note that this is a different way of looking at variance and standard deviation.  Instead of considering it as a pure measure of dispersion it is, in fact, a measure of the performance of a baseline predictive model.
+
+The code chunks below demonstrate the calculation of the  variance.
+
+```{r}
+# The variance using long-handed calculation
+(sum((sales - 4.9)^2))/(10 - 1)
+```
+
+```{r}
+# Using the var() function
+var(sales)
+```
+
+If $y_i$ represent the actual target value then the baseline mode predicts each of these value by equation (4)
+
+$$ y_i = \bar{X} + \varepsilon_i \tag{4} $$
+
+Here $\varepsilon_i$ is each individual error.  Equation (4) forms the basis of a common theme throughout statistics, machine learning, and deep learning.  This basis states that the outcome is equal to the model plus an error; given in equation (5).  The aim is to create a model that will minimize the error, and as such, must greatly improve on the baseline model.
+
+$$ \text{target} = \text{model} + \text{error} \tag{5} $$
+
+## Improving the model
+
+The baseline model explained above can be improved through the process of linear regression.  The code chunk below creates a feature variable called `input.var` and a target variable called `output.var`.  Both of the variables are of continuous numerical type.  The feature variable consists of a sample size of $100$ with a mean of $100$ and a standard deviation of $10$, created with the use of the `rnorm()` function.  The `round()` function limits the number of decimal values.  The output adds some random noise to each value in the feature variable.
+
+```{r}
+set.seed(1) # For rperoducible random values.
+input.var = round(rnorm(100,mean = 10,sd = 2),digits = 1)
+# Add random noise
+output.var = round(input.var + (10 * rnorm(100,mean = 0,sd = 0.2)) + 2,digits = 1)
+```
+
+A scatter plot of each pair of the variable values is created below.  The feature variable is placed on the $x$-axis (independent variable) and the target variable on the $y$-axis (dependent variable).
+
+```{r}
+p <- plot_ly(type = "scatter",
+             mode = "markers",
+             x = ~input.var,
+             y = ~output.var,
+             marker = list(size =14,
+                           color = "rgba(255, 180, 190, 0.8)",
+                           line = list(color = "rgba(150, 0, 0, 0.8)",
+                                       width = 2)))%>%
+  layout(title = "Scatter plot",
+         xaxis = list(title = "Input variable", zeroline = FALSE),
+         yaxis = list(title = "Output variable", zeroline = FALSE))
+p
+```
+
+A model can now be created that will transform every feature variable value and when an error term is added, will results in the target variable value.
+
+As with the baseline model, the error can be calculated.  The error (when discussing linear regression) is referred to as the _deviation_ in a model.  It follows exactly the same concept as the baseline model and is simply the sum of the squared differences between each output variable value and its predicted value.  This is shown in equation (6).
+$$ \text{deviation} = \sum_{i=1}^{n}{{\left( \text{observed} - \text{model}  \right)}^{2}} \tag{6}  $$
+
+The baseline model predicts the output variable as the mean of the output variable.  This is calculated as the `sst` in the code chunk below.
+
+```{r}
+differences <- output.var - mean(output.var) # Difference between mean and actual value
+squared.differences <- differences^2 # Square each difference
+sst <- sum(squared.differences) # Sum up all the squared errors
+sst
+```
+
+Looking back at the plot of the data, it could be imagined that a line could be drawn slanting upward through the point.  Any straight line on a plane has a slope and an intercept.  The slope is the rise over run and the intercept is the value at which the line crosses the $y$-axis, i.e. when the independent variable is $0$.  Such a line can serve as an improved model, considering that the baseline model is simply a straight horizontal line with height on the $y$-axis equal to the mean of the target variable.
+
+In the example below, and by pure guess work, the slope is set to $0.8$ and the intercept to $0.1$, i.e. the predicted output variable value ($\hat{y}_i$) for a specific subject ($x_i$) will be $\hat{y_i} = 0.95 x_i + 2$.  A $\hat{y}$ symbol is often used to indicate the predicted target value (that is when the error term in not added).  The sum of squared errors is calculated and save in the object `ssm` below.
+
+```{r}
+new.differences <- output.var - (0.95 * input.var + 2)
+new.squared.differences <- new.differences^2
+ssm <- sum(new.squared.differences)
+ssm
+```
+
+The improvement over the baseline model can be expressed as a ratio of the new model over the baseline model.  This ratio is given in equation (7).
+$$ R^2 = \frac{\text{ssm}}{\text{sst}} \tag{7}  $$
+
+This ratio describes the variance in the outcome explained by the new model (the systematic variance) relative to how much variance there was to begin with (in the baseline model) (the unsystematic variance).
+
+```{r}
+r.squared <- ssm / sst
+r.squared
+```
+
+The actual _best_ model can be calculated using the `lm()` function as seen in the code chunk below.  The `summary()` function provides all the required answers.
+
+```{r}
+lr.model <- lm(output.var ~ input.var)
+summary(lr.model)
+```
+
+From the summary the slope is $0.9982$ and the intercept to $1.9425$, i.e. the predicted target variable value ($\hat{y}_i$) for a specific sample subject, ($x_i$), will be $\hat{y_i} = 0.9982 x_i + 1.9425$.  The latter is the `Estimate` of the `(Intercept)` and the slope is the `Estimate` of the `input.var` in the table above.
+
+The $\beta_0 + \beta_1 x_i$ part represents the model part of equation (5) and is shown in equation (8) below.
+
+$$ \hat{y}_i = \beta_0 + \beta_1 x_i \tag{8}  $$
+
+Here $\beta_0$ is the intercept and $\beta_1$ is the slope.  Equation (9) shows the calculation for the actual value.
+
+$$ y_i = \beta_0 + \beta_1 x_i + \varepsilon_i \tag{9} $$
+
+This is, in essence, linear regression.  The target is very simply a constant multiple of the feature variable.  Each individual target variable value is multiplied by the same constant.  If there were more than one feature variable the expression would simply grow, as represented in equation (10).
+
+$$ y_i = \beta_0 + \beta_1 x_{1_i} + \beta_2 x_{2_i} + \ldots + \beta_n x_{n_i} + \varepsilon_i \tag{10} $$
+
+This equation represents $n$ feature variables marked $x_1$ through $x_n$.  Each though is multiplied by its own constant.  The result is still a linear model.
+
+## Conclusion
+
+This tutorial explained the concept of a model to use the values in a feature variable to predict the corresponding value in a target variable.
+
+The idea of a model with coefficients and an error term lays the ground work for understanding the concepts behind a deep neural network.
