@@ -1,0 +1,103 @@
+---
+title: "Introduction to Keras"
+author: "Dr Juan H Klopper"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+setwd(getwd())
+library(keras)
+```
+
+## Preparing the data
+
+```{r}
+mnist <- dataset_mnist()
+```
+
+```{r}
+names(mnist)
+```
+
+```{r}
+x_train <- mnist$train$x
+y_train <- mnist$train$y
+x_test <- mnist$test$x
+y_test <- mnist$test$y
+```
+
+```{r}
+dim(x_train)
+```
+
+```{r}
+dim(y_train)
+```
+
+```{r}
+# reshape
+x_train <- array_reshape(x_train, c(nrow(x_train), 784))
+x_test <- array_reshape(x_test, c(nrow(x_test), 784))
+# rescale
+x_train <- x_train / 255
+x_test <- x_test / 255
+```
+
+One-hot encoding
+
+```{r}
+y_train <- to_categorical(y_train, 10)
+y_test <- to_categorical(y_test, 10)
+```
+
+## Building the model
+
+```{r}
+model <- keras_model_sequential() 
+model %>% 
+  layer_dense(units = 256, activation = 'relu', input_shape = c(784)) %>% 
+  layer_dropout(rate = 0.4) %>% 
+  layer_dense(units = 128, activation = 'relu') %>%
+  layer_dropout(rate = 0.3) %>%
+  layer_dense(units = 10, activation = 'softmax')
+```
+
+A summary of the model can be viewed.  This shows the shape of each layer and the number of trainalble and non-trainable parameters.
+
+```{r}
+summary(model)
+```
+
+Next up is the compilation of the model, providing the loss function, the optimizer, and the metric to be displayed during each epoch.
+
+```{r}
+model %>% compile(
+  loss = 'categorical_crossentropy',
+  optimizer = optimizer_rmsprop(),
+  metrics = c('accuracy')
+)
+```
+
+## Training and evaluating
+
+```{r}
+history <- model %>% fit(
+  x_train, y_train, 
+  epochs = 30, batch_size = 128, 
+  validation_split = 0.2
+)
+```
+
+```{r}
+plot(history)
+```
+
+## Evaluating on the test set
+
+```{r}
+model %>% 
+  evaluate(x_test,
+           y_test)
+```
+
