@@ -1,0 +1,217 @@
+---
+title: "A brief introduction to R"
+author: "Dr Juan H Klopper"
+output:
+  html_document:
+    toc: true
+    number_sections: false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+<style type="text/css">
+h1 {
+    color:#1a2451;
+}
+h2 {
+    color:#ffbd4a;
+}
+h3 {
+    color:#1a2451;
+}
+</style>
+
+![](KRG elegant logo for light BG.png)
+
+## Introduction
+
+`R` is a programming language primarily designed for statistical computing.  As with many things in the world of computer science, it has a fascinating history.  More information on the topic is available on Wikipedia at https://en.wikipedia.org/wiki/R_(programming_language) 
+When installed on a computer `R` consists of certain base and core parts.  Over many years the language has been extended by countless packages or libraries.  These are downloadable and installable code that greatly enhances the use of `R`.
+
+To make use of `R`, it has to be downloaded and installed.  RStudio is a graphical user interface for `R`.  It is also a program that is downloaded and installed.  RStudio is a very powerful program which makes the use of `R` a pleasure.  It is not only an environment in which `R` programs and scripts can be written, but it can also be used to create books, blog posts, documents, and dissertations, making it an ideal tool for the novice and expert alike.
+
+## Downloading and installing
+
+`R` is available as a downloadable file for most operating systems.  The download files are are available from the Comprehensive R Archive Network (CRAN) at https://cran.r-project.org/  Simply follow the instructions for the required operating system.
+
+RStudio is available from https://www.rstudio.com/ .  This website is also a rich resource for information on `R`.  Once again, the appropriate file is simply downloaded and installed.
+
+## The RStudio environment
+
+The main menu and icon bar should be somewhat familiar to anyone who has used a word processor or a spreadsheet program.
+
+The main RStudio program is divided into several panels.  The arrangement and even look (colors) for these panels are customizable through the menu (Global Options under Tools).
+
+The upper-left panel is the Main working area where actual code is written.  It has its own set of icons for specific tasks.
+
+The bottom-left panel provides a Console.  This space shows the output of code created in the Main panel.  Code can also be written here.  The bottom-left panel also houses a tab for the Terminal.  This provides access to the operating system and folder structure of the computer.
+
+The top-right panel has three tabs by default.  These show information about the current Environment (information about objects created in the code), about the history of recent code, and about external Connections.
+
+The bottom-right panel has several tabs.  One shows the Files on the local computer.  The next shows any Plots created by code.  These plots can be saved as separate image files on the local computer for later use.  The Packages tab serves as main center for downloading additional packages and libraries.  The Help tab provides extensive help on everything `R` has to offer.  It has a convenient search bar.  Simply enter an `R` command in the search box and the Help tab will show useful information for that command.  The Viewer tab can show created documents, websites,  book chapters and all objects created in `R`.
+
+## Creating a file
+
+Clicking File > New File (on the main menu) shows the type of files that can be created.  This course uses mostly the R Script and R Markdown... selections.
+
+A script creates a simple file in which code can be written and executed at will.  An R Markdown file is a rich environment that allows for the creation of documents such as web pages, documents, textbooks, applications, and much more.
+
+The introduction to the language that follows assumes assumes that a new R Script has been created.
+
+## Simple artithemtic
+
+A line of code can be entered in a script and executed by hitting the Run button on the top-right of the Main panel.  This must be done when the cursor is anywhere on the actual line of code.
+
+Try typing `2 + 2` (spaces optional) and hitting the Run icon.  The Console opens on the bottom-left and displays the line of code, `> 2 + 2` and below this, the solution, which is `4`.  The `[1]` refers to the item number.  Many objects in `R` are lists of of values.  Since there is only a single element in the solution, the `4`, it is the first element and hence named `[1]`.
+
+Try other common arithmetical operations such as `2 - 2`.  Multiplication uses the asterisk, `*`.  Division is accomplished by the forward slash, `/` symbol.  Powers are most conveniently expressed using the caret, `^`, symbol.
+
+Trigonometric and other transcendental functions are built into `R`.  These include `sin()`, `cos()`, and Euler's number, `exp()`.  To get the actual Euler's number, simply type `exp(1)`, which is $e^1$.  The result should be `r exp(1)`.
+
+The parenthesis denote the commands above as functions.  Functions take an input and produce an output.  The input is stated within the parenthesis and are called _arguments_.  The arguments are specific to each function and explicitly required.  Try typing the name of a function into the search bar in the Help tab in the bottom-right panel.  It gives instructions on the use of arguments for that function.  There is more information on function later in this chapter.
+
+## Computer variables
+
+Solutions to code can be saved as objects.  These are given a name, created by the user, and stores the content of the object in the computer's memory for later retrieval.  The names of these objects follow certain conventions.  Their names are first and foremost guided by the actual content of the object.  A wisely chosen name indicates what to expect in the object.  
+There are restrictions on the names for objects.  Built-in functions must not be used and no illegal characters such as spaces can be used.  Two popular conventions are snake_case and camelCase.  In the first instance, proper words are connected by underscore and in the second case the first word starts with a lowercase letter, but each subsequent word starts with an uppercase letter.  Another common practice is to separate the words with periods (full-stops).
+
+The computer variable name is followed by a `<-` symbol.  The keyboard shortcut for this is ALT+- (Windows and Linux) or OPT+- (MAC).  Both of these are achieved by holding down the ALT or OPT key and hitting the minus key.  Follow this up by the value that is to be saved in the object.
+
+In the code below are some examples.  Note the use of the `#` symbol.  Any code that follows this symbol (in a line) is ignored by `R` and only serves as a way to leave comments about code.  This is of great help when viewing code later or for handing code over to others for use.
+
+```{r}
+# An obejct that holds text
+myText <- "This is text!" # Note the use of quotation marks
+
+# An object that hold the solution to an expression
+myAnswer <- 4 + 4
+```
+
+
+The content of an object can be retrieved (or even referred to by the computer variable name in other lines of code).
+
+```{r}
+myText
+```
+
+## Lists
+
+As mentioned, lists are very common objects in `R`.  In the example below a computer variable named `temperature` holds five elements (all of the same type, i.e. integers).  These are stored as `vectors` and are created with the `c()` function.
+
+```{r}
+temperature <- c(72, 76, 80, 65, 69)
+temperature
+```
+
+List can be created as sequences using the `seq()` function.  It typically takes a start, stop, and step-size argument.  The code below creates an object name `myList` that has elements starting at `1` and ending at `10`, with a step-size of `0.5`.
+
+```{r}
+myList <- seq(1, 10, 0.5)
+myList
+```
+
+Note the bracket notation at the start of each row (should the list of number overflow one line).  It gives the number of the element (its address) that starts a new line.
+
+The number of elements in a list can be expressed using the `length()` function and passing the object name as the argument.
+
+```{r}
+length(myList)
+```
+
+## For loops
+
+`R` code can be made to run iteratively over some sequence.  This is done creating a `for` loop.  Such a loop uses a counter to repeat a task a specified number of times.
+
+The code below creates a sequence of integers ($1$ through $10$) and stores this as a number vector in the object with the computer variable name `my.numbers`.  A second object is created named `sum.total` that holds the integer value $0$.
+
+The loop uses the keyword `for`, which then specifies the parameters of this loop in parenthesis.  Note the use of a placeholder, `i`, for the iteration.  It states that the loop should run through each value in `my.numbers`, i.e. $1,2,3,\ldots,10$.  During each loop the content inside the curly braces, `{}` are executed.  In this case it takes the current value in the `sum.total` object and adds the current loop value of the placeholder, `i`, to it.
+
+During the first loop the current value in `sum.total` is $0$ and in `i` is $1$.  These two values are added (right-hand side of the equation) and the passed as new value $0 + 1 = 1$ to the `sum.total` object. Note how this differs from a standard algebraic equation in mathematics.  In `R`, as in most other computer languages, the right-hand side of an equation ( a line of code with an equal sign) is executed first and the result overwrites what is currently held in the object on the left (or creates it if it doesn't yet exist).
+
+During the second loop the value in `i` is $2$ (the next element in `my.numbers`), which is added to the current value in `sum.total`, which is $1$ resulting in $3$.  This is now passed as the new value in `sum.total`.
+
+Adding all the integer values from $1$ through $10$ is $55$.  This is printed in the last line (outside the curly braces).
+
+```{r}
+my.numbers <- seq(1, 10, 1)
+sum.total <- 0
+for (i in my.numbers){
+  sum.total = sum.total + i
+}
+sum.total
+```
+
+## Functions
+
+There are numerous built in function in `R`.  These include the keywords followed by a set of parenthesis used earlier in this chapter.
+
+As another example, the code below calculates the average of the sequence created and stored in the object `my.numbers` above.  This is achieved using the `mean()` function and passing the object containing the $10$ numbers as argument.
+
+```{r}
+mean(my.numbers)
+```
+
+Functions can also be created.  The code below performs this task by starting with a name for this new function called, `my.mean` (use names that are not part of the built-in set).  The `function` keyword stipulates that `my.name` is not a simple object, but a function.  The content of the parenthesis that follows is a list of arguments.  In this case there is a single argument which is a placeholder for whatever will be passed to the function when it is called.
+
+Inside the curly braces follows a set of instruction that the new function performs.  The first is to create a new object called, `number.of.elements` that holds the value of the number of elements in the argument that is to be passed to the function.  This is done through the use of the `length()` function.
+
+The next set of instructions follow the pattern used in the preceding section describing `for` loops.  It starts off by setting the value held in a new object called `cumulative.total` to $0$.  The `for` loop iterates through all the elements held in the object passed to the function and iteratively adds them to the `cumulative.total` object.
+
+The function ends with the `return` keyword that returns the value held inside of the parenthesis that follows.  Since the aim of this new function is to return a mean value of the argument passed to the function, it divides the sum total by the number of elements.
+
+```{r}
+my.mean <- function(vals){
+  number.of.elements <- length(vals)
+  cumulative.total <- 0
+  for (i in vals){
+    cumulative.total = cumulative.total + i
+  }
+  return (cumulative.total / number.of.elements)
+}
+```
+
+The function is now called like any other in `R`.  The code below passes the $10$ integers in `my.numbers` to the function.  The result is the same as was returned using the built in `R` function `mean()`.
+
+```{r}
+my.mean(my.numbers)
+```
+
+
+## Loading data
+
+A script file and an R Markdown file can be saved on the computer's disk.  Files such as spreadsheet files can be imported from disk.  It is useful to keep these in the same folder.  The `getwd()` function returns the directory (folder) on the computer where the `R` file is saved.  This can be passed as argument to the `setwd()` function to tell the current file where it is saved.  All files in this directory can the be accessed by simply using their name.  If the `setwd(getwd())` option is not used, then the full address to the file on the computer must be used.
+
+
+```{r}
+setwd(getwd())
+```
+
+In the code below the `LogitsicRegression.csv` spreadsheet file is imported into the current `R` file, giving access to the data in the spreadsheet.  This content is saved in an object conveniently named `data`.
+
+```{r}
+data <- read.csv("LogisticRegression.csv")
+```
+
+Note that `data` appears in the top-right Environment tab along all the other objects created so far.  Clicking on the square box at the end of the object opens the content in the Main panel (in a new tab).  This can also be done using the `View()` function.  Note the uppercase V.
+
+```{r}
+View(data)
+```
+
+## Installing `tensorflow` and `keras`
+
+TensorFlow is Google's open source framework for tensor calculations used in deep learning.  It exists in a package that can be added to `R`.
+
+Keras is a library of code that uses TensorFlow as a backend.  It greatly simplifies writing TensorFlow code that can be laborious.  It has become very popular and is even built into the newer version of TensorFlow.
+
+Adding these packages to `R` requires the addition of the `reticulate` package and the `devtools` package.  In Windows, the latter also requires the installation of RTools from https://cran.r-project.org/bin/windows/Rtools/  .  Install `reticulate` and `devtools` using the Packages tab in the bottom-right panel.
+
+To install `tensorflow` and `keras` visit https://tensorflow.rstudio.com/keras/ .  A Graphics Processing Unit (GPU) version is also available for systems that have modern NVidia GPU<sup>s</sup>.  In most laptops these can cause problems, though.  Once larger datasets, such as those with images, are used in deep learning models, there might not be enough memory in the GPU to train the models.  When starting with deep learning is is safe to simply install the central processing unit (CPU) versions of these packages.
+
+## Conclusion
+
+This is by no means a comprehensive introduction to the language, but merely a short primer.  The `R` language is easy to learn.  Simply start coding.  Regularly consult the Help tab and access content (such as the RStudio site) on the web.
+
+Typing the rest of the content in this course into a new file will greatly facilitate a natural path towards learning to code in `R`.  Just do it!
