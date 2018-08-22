@@ -1,0 +1,110 @@
+---
+title: "Poor performance of a deep learning model"
+author: "Dr Juan H Klopper"
+output:
+  html_document:
+    toc: true
+    number_sections: false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+<style type="text/css">
+h1 {
+    color:#1a2451;
+}
+h2 {
+    color:#ffbd4a;
+}
+h3 {
+    color:#1a2451;
+}
+</style>
+
+![](KRG elegant logo for light BG.png)
+
+## Introduction
+
+This chapter considers the requirements that exist for training and test sets and introduces the concepts such as the _ground truth_, _bias_, and _variance_.
+
+These are all very important to understand.  A model is not created once.  A lot of though must go into the preparation of the data, the creation of the model, inclusive of the setting of the hyperparameters, evaluating the model, and iteratively restarting the process again and again.
+
+## Training and test sets
+
+The preceding chapter showed how to divide a dataset into a training and test set.  Supervised machine learning requires the presence of labeled data, i.e. a target (outcome) variable.  A dataset for which the target variable exists, is an absolute requirement for testing the accuracy (an other performance indicators) of a trained deep neural network.  Such a dataset is known as a _test set_.
+
+A test set must contain data that was not available to the model during training.  It must also be representative of both the original dataset (if it was taken from the original) and it must be representative of real-world data.  The test set furthermore requires the same set of feature variables as the set that was used during training.
+
+The situation arises where data is being actively collected while a model is being built, compiled, and used for training.  Under such circumstances, it might be wise to use the whole current dataset as the training set and use newly collected data as a test set.  This test set still has the same requirements as mentioned before, though.
+
+The size of the test set is of great importance, especially if it is split from the original dataset.  It needs to be large enough to be representative, but not so large as to take away vital data used in training.  With very small datasets, the norm used to be a $70$% : $30$% split.  As datasets have become increasingly large, this is no longer the case.  In the preceding chapter, only $10$% of the data was extracted as a test set, yet is still comprised about $5000$ samples.  With datasets approaching, and even far exceeding, a million samples, a $0.5$% or $1$% sub-dataset might be adequate for the test set.
+
+Another requirement that must be considered is the distribution of the training and test sets.  This is of special concern when the datasets are not collected at the same time or in the same way.  Examples might include image recognition using convolutional deep neural networks.  It might be that the training images are special, selected, high-resolution images, where the test set might be more indicative of real-world scenarios.  Such a training set, even when well designed, can never generalize to real-world data.
+
+Distribution also refers to the actual proportions of the elements in the target variable sample space.  When one of these elements occur very infrequently _class imbalance_ occurs (a class here refers to one of the elements in the target variable sample space).  It is important that the training and test sets have an equal mismatch.  When the mismatch is so severe, i.e. $0.95:0.05$, simply guessing the majority class will be $95$% accurate.  A deep neural network might not even be required in these cases!  Data augmentation by simulating minority class might help solve this problem.  Data augmentation will be discussed in a following chapter.
+
+All of the above also apply to the validation set<sup>*</sup>, should it be created in the network (which always a good idea).
+
+A training set is not absolutely required.  In some cases data scientist rely solely on the validation set during the model training to indicate problems with the deep neural network, which in turn informs changes for improvement.  Remember that key performance indicators such as loss and accuracy are produced for the validation set.  This is similar to the loss and accuracy for the test set used in the preceding chapter.
+
+<sup>*</sup> _Some texts refer to the validation set as the development set or the hold-out set.  Data scientist that only make use of a training and validation set, may refer to the development set as a test set._
+
+## The ground-truth
+
+At first glance, this might be an easy concept.  The target data might refer to _benign_ or _malignant_ disease.  Consider once again an example from computer vision where histology specimens (microscope slides of tissue biopsies) form the dataset.  In the case of benign versus malignant disease, each of the samples in the dataset must be noted as such.  The question arises as to who labeled the samples.  Was it an experienced histopathologist?  Did she or he make a mistake, thereby mis-classifying the target variable?  Was it consensus by a group of experts?  In other examples where the target variable was a measurement from an apparatus, the question again arises as to possible inaccuracies in the measurement, leading to mis-classifications.  Such errors might occur in any data capture of the target variable.  All of the above creates a question mark around the idea of the ground-truth.
+
+The concept of the _optimal error_, also called the _Bayes error_, arises.  This is the theoretical smallest possible error.  In certain cases the human error approaches the optimal error as is seen in cases where the labeling is done by a group of experts or very accurate apparatus.  Note, though, that there may be a large difference between the optimal error and the error inherent in a particular dataset.
+
+In general, the aim of a neural network is to approach optimal error.  At the very least, it must outperform human error.  In this simple statement lies its promise in the field of healthcare and indeed, in many other fields.
+
+## Bias and variance
+
+These are extremely important terms in machine learning.  _Bias_, also called _underfitting_, refers to a model that does not separate the classes of a test set that well.  Such a model is not sophisticated enough and there is room for improvement.   _Variance_, also called _overfitting_, refers to a model that is so precise that it actually only fits the training set well. This problem is also referred to as _memorization_, where the model simply learns the training set very accurately.  When it comes to new data, the model actually performs poorly.
+
+Overfitting can be demonstrated by a simple polynomials.  The figure below (taken from the `scikit learn` library website using python), shows some data points and a model (a line) that attempts to fit the data.  In the context of deep learning, such a line can be viewed as a decision boundary.  Samples on one side of the line will be predicted as belonging to one class and samples on the other will be predicted to be in the other class (for binary classes).  A straight line might not be the best decision boundary.  A non-linear line might be slightly better (as depicted by a higher degree polynomial below).  In the extreme, a very convoluted decision boundary can be created (going through all the data point below).  This model clearly overfits the data.  It will perform well on the training set, but poorly on new data.
+
+![](Overfitting.png)
+
+There must be measurements by which bias and variance can be quantified in order to inform changes in the neural network.  Two such measurements are _training set error_ and _validation set error_.  Various scenarios arise based on the values of these errors.  Some of these examples are highlighted below.
+
+### Overfitting with a very low training set error
+
+This is indicated by a large difference between the error rates of the training and validation sets, i.e. an error rate of $1$% for the former, but $10$% for the latter.  Such a model is said to have _high variance_.
+
+### Underfitting with both high training and validation errors
+
+Here it is assumed that the optimal error is present in the target variable, i.e. less than $1$%.  In this scenario both the training and the validation sets have high errors, i.e. $15$% and $16$% respectively.  Such a model has _high bias_.  Note that the differentiating factor here is the relative large difference between the _optimal error_ and the training error versus the relatively small difference between the training and validation set errors.
+
+### Both high variance and bias
+
+In this scenario there are equally large differences between the optimal error, the training error and the validation error, i.e. $1$% versus $15$% versus $30$%.
+
+### The influence of the optimal error
+
+In _the underfitting with both high training and validation errors_ subsection above, it was mentioned that there is an assumption that the optimal error exists in the target variable.  To some extent this is true for the other two subsections.  In the case of high bias above, it might be known that the optimal error is $14$%.  With the same training set error of $15$% and validation set error of $16$% as above, this becomes a model with both low bias and low variance.  Each case must be seen in conjunction with the underlying error inherent in the target variable.  In most cases this requires expert domain knowledge.  This brings home the point that such experts must be involved in deep learning and that it is not just the playground of mathematicians and computer scientists.
+
+In summary, it can be said that the difference between the optimal and the training set errors informs bias and the difference between the training set and validation set errors, informs the variance.
+
+Older reports and research documents referred to the concept of a trade-off between bias and variance.  In essence, to create models that sit in the Goldilocks zone in between.  With modern deep learning architectures such a trade-off is not longer the norm.  Models can be created with low bias and low variance.  It might require a lot of work, though. 
+
+## A systematic approach to correcting for bias and variance
+
+### Correcting high bias
+
+Here there is a relatively large error in the training set.  The learning phase is performing poorly.  Possible solutions (in order) include:
+
+1. Create a bigger network, i.e. more layers, more nodes in a layer
+2. Train for longer (more epochs)
+3. Change to a different architecture, i.e. convolutional neural networks for image classification
+
+### Correcting high variance
+
+Here there is a relatively large difference between the error rate of the training and validation sets.  Possible solutions<sup>**</sup> (in order) include:
+
+1. Capture more data
+2. Augment the data
+3. Regularization, dropout, batch normalization and other techniques 
+
+<sup>**</sup> _Some of these solutions will be discussed in following chapters._
