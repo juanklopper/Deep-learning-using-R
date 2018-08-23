@@ -1,0 +1,103 @@
+---
+title: "Regularization"
+author: "Dr Juan H Klopper"
+output:
+  html_document:
+    toc: true
+    number_sections: false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+<style type="text/css">
+h1 {
+    color:#1a2451;
+}
+h2 {
+    color:#ffbd4a;
+}
+h3 {
+    color:#1a2451;
+}
+</style>
+
+![](KRG elegant logo for light BG.png)
+
+## Introduction
+
+Central to supervised machine leaning stands the cost function and the attempt to minimize this function by optimizing the values of its parameters (the unknowns).  All the possible solutions together make up what is known as the _hypothesis space_.  
+
+Herein, though, lies a danger.  Certain solutions in this hypothesis spaces are extremely _partial_ to the training set.  Unfortunately, they are less successful when given data outside of the training set.  These solutions are said not to _generalize_.
+
+All attempts must be made to select from the hypothesis only those solutions that will generalize well.  This is done through constraining the hypothesis space, i.e. making only certain solutions possible.
+
+There are many ways to constrain the hypothesis space and one of the most common techniques, _regularization_, is introduced in this chapter.
+
+## Complexity
+
+One way to approach possible attempts at constraining the hypothesis space is to sequence the space.  If a hypothesis space is seen as a set and denoted by $\mathbb{H}_i$, then such a sequence is shown in equation (1).
+
+$$\mathbb{H}_1 \subset \mathbb{H}_2 \subset \ldots \subset \mathbb{H}_n \tag{1}$$
+
+An example would be polynomials where all first degree polynomial are a subset of (contained within) all second degree polynomials.
+
+In the case of simple linear regression, _complexity_ can be sequenced in a similar fashion and in a number of ways.  This idea expands naturally to the parameters in neural networks.  Some are listed below.
+
+1. The dimensionality of the inputs space (how many feature variables)
+2. The number of non-zero coefficients, $w_i$ in $w_1 x_1 + w_2 x_2 + \ldots + w_n x_n$, referred to as $\ell_0$ _complexity_
+3. The sum of the the absolute values of the coefficients, $\sum_{i=1}^n \left| w_i \right|$, referred to as $\ell_1$ _complexity or _lasso complexity_
+4. The sum of the squares of the coefficients, $\sum_{i=1}^n w_i^2$, referred to as $\ell_2$ _complexity_ or _ridge complexity_ (used as example in the description below)
+
+If a chosen measure of complexity is symbolized as $\omega$, then for a given value $r \in \omega$, the hypothesis space can be constrained as shown in equation (2).
+
+$$\mathbb{H}_1 \subset \mathbb{H}_2 \subset \ldots \subset \mathbb{H}_{r \in \omega} \tag{2}$$
+
+This makes $r$ a hyperparameter that the designer of a neural network must choose and change iteratively until the model generalizes well to unseen and real-world data.
+
+## Regularization
+
+This concept of $r \in \omega$ can be expressed explicitly in a deep neural network by altering the cost function in some way, i.e. by penalizing it in some way.  In machine learning, _penalized minimization_, referred to as _Tikhanov regularization_, is used most often.  This penalizes the cost function by adding a regularization term according to a specified value for $r \in \omega$, where $\omega$ is determined by the choice of complexity measurement.
+
+Through the process of gradient descent, backpropagation attempts to minimize a cost function.  This idea is expressed in equation (3).
+
+$$ \mathscr{C} \left(W,b\right) = \frac{1}{m} \sum_{i=1}^{m} \mathscr{L} \left( \hat{y}^{\left( i \right)},y^{\left( i \right)} \right) \tag{3}$$
+
+Here $\mathscr{C} \left( w , b \right)$ is the cost function, which is a multivariable function of the weight and bias parameters.  The number of samples is denoted by $m$ and the loss function is denoted by $\mathscr{L}$, which is in turn a function of the predicted target variable, $\hat{y}^{\left( i  \right)}$, and the actual target variable, $y^{\left( i \right)}$, over each of the samples, $\left( i  \right)$.
+
+Regularization adds a term to the cost function (Tikhanov regularization).  Equation (4) expresses $L_2$-regularization.
+
+$$\mathscr{C} \left(W,b\right) = \frac{1}{m} \sum_{i=1}^{m} \mathscr{L} \left( \hat{y}^{\left( i \right)},y^{\left( i \right)} \right) + \frac{\lambda}{2m} \sum_{l=1}^{L} {|| W^{\left[ l \right]}  ||}^{2}  \tag{4}$$
+
+  Here the $L$ in the second term indicates all of the layers (not to be confused with the $\mathscr{L}$ in the first term denoting the loss function), whereas $\lambda$ is the regularization parameter, a hyperparameter that must be chosen by the designer of the neural network.  Note that the $\frac{1}{2}$ is simply a scaling term.  This makes the derivative of the cost function a simpler equation.
+
+Note that $W$ is a matrix with dimension $n^{\left[ l \right]} \times n^{\left[ l - 1  \right]}$, where $l$ refers to the current layer and $l-1$, the previous layer.  This allows for the expression in the second term of equation (4) above to be written as in equation (5).
+
+$$ {|| W^{ \left[ l \right]} ||}^{2} = \sum_{i=1}^{n^{\left[ l \right]}} \sum_{j=1}^{n^{\left[ l - 1 \right]}} {\left( w_{ij} \right)}^{2}  \tag{5}$$
+Equation (5) is referred to as the square of the _Euclidian_ or _Frobenius_ norm of a matrix.  To understand this equation, consider a layer $\left[ l \right]$ in a network, containing $n^{\left[ l \right]}$ nodes.  The preceding layer, $\left[ l-1 \right]$, has $n^{\left[ l - 1 \right]}$ nodes.  A matrix has to be transposed and multiplied with the column vector, ${n}^{ \left[ l-1 \right] }$ to provided a column vector with dimensions $n^{\left[ l \right]}$.  Such a matrix (after transposing) must therefor have dimensions $l \times \left( l-1  \right)$.  This is depicted in equation (6).
+
+$$W_{l \times \left( l - 1 \right)}^{\left[ l \right]} \cdot x_{\left( l - 1  \right) \times 1 }^{\left[ l-1 \right]} = x_{l \times 1}^{\left[ l \right]} \tag{6}$$
+
+An example of equation (5) where $l = 3$ and $l-1 = 2$ is shown in equation (7) below.
+
+$$W_{3 \times 2} = \begin{bmatrix} 3 && 4 \\ 2 && 1 \\ 1 && 1 \end{bmatrix} \\ 
+{|| W^{ \left[ l \right]} ||}^{2} = \left( 3^2 + 4^2  \right) + \left( 2^2 + 1^2 \right) + \left( 1^1 + 1^2 \right) = 32 \tag{7}$$
+
+It should be clear that there is ultimately an addition to the cost function and through this addition, the constraint of the hypothesis space follows.  Please note that strictly speaking, the complexity can be added to the cost function in a different way (called _Ivanov complexity_) that truly constrains the hypothesis space instead of penalizing the cost function as is the case in Tikhanov regularization.  In the common case scenario of deep neural networks, the effect is similar though, especially when seen from the point of view of the ultimate goal of generalizing of the model. (This follows from _Lagrangian duality theory_ which is not covered in this text).
+
+The intuition behind how the the hypothesis space is reduced can be understood in terms of the larger cost function value (by way of addition of a positive term).  By taking the derivative (see below) and through gradient descent, i.e. minimizing the cost function, the weights will be pushed towards being zero.  If weight values are closer to zero (smaller), then it makes the regularization term smaller (which is what gradient descent will do).  With many weights approaching zero in value, this makes for a much _simpler_ model, hence preventing overfitting (the final new weight values do not give the best performance for the training data).  In fact, small values of the $W$ (the weight matrix), provides small values during forward propagation.  these smaller values tend to be in the linear part of the activation function (i.e. tanh or sigmoid), turning the network into more of a linear network.  A linear network has a much less complex decision boundary, with the result that overfitting is reduced.
+
+While this new cost function might seem complex, its derivative is fairly simple (as the penalization term is a sum of terms, made even easier by the original scaling term, $\frac{1}{2}$).  During the update phase of backpropagation, the weights are updated as shown in equation (8).
+
+$$\partial W^{\left[ l \right]} = \psi + \frac{\lambda}{m} W^{\left[ l \right]} \\ W^{\left[ l \right]} = W^{\left[ l \right]} - \alpha \partial W^{\left[ l \right]} \tag{8}$$
+
+Here $\psi$ is the original derivative of the cost function without the regularization term.
+
+Note also that this form of regularization only describes the weights and not the biases.  The latter can be included with the use of the Frobenius norm of a vector.  In practice, though, there are far fewer bias parameters than weight parameters and they are excluded from the regularization.
+
+## Conclusion
+
+Regularization, especially $\ell_2$ regularization, is commonly used to decrease high variance in deep neural networks.  By adding to the cost function it creates a simpler, more linear model, that may perform better during testing or with real-world data.
+
+The code in `Keras` and `TensorFlow` is very easy to implement.
