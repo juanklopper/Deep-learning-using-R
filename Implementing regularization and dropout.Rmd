@@ -1,0 +1,361 @@
+---
+title: "Implementing regularization and dropout"
+author: "Dr Juan H Klopper"
+output:
+  html_document:
+    number_sections: no
+    toc: yes
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+setwd(getwd())
+```
+
+```{r libraries, message=FALSE, warning=FALSE}
+library(keras)
+library(readr)
+library(tidyr)
+library(tibble)
+library(plotly)
+```
+
+
+<style type="text/css">
+h1 {
+    color:#1a2451;
+}
+h2 {
+    color:#ffbd4a;
+}
+h3 {
+    color:#1a2451;
+}
+</style>
+
+![](KRG elegant logo for light BG.png)
+
+## Introduction
+
+The preceding chapters introduced methods to decrease the problem of overfitting or high variance.  The result is a model with trained parameter values that fit the training data very well, but perform poorly with respect to test or real-world data.
+
+This chapter shows the implementation of $\ell_2$-regularization and dropout to reduce overfitting.  Models will be created to illustrate the problem of overfitting, before showing how to add the mentioned solutions.  This will be done with an example of _sentiment analysis_.
+
+The dataset used in this chapter is built into Keras and contains $50000$ examples of written text.  The text is labeled according to a sentiment that serves as target variable and is either _positive_ or _negative_ (encoded as integers).
+
+Text must be converted into computable data before use in a deep learning network.  This is done by selecting a fixed number of words that become the feature variables (one word is one variable).  If any of the specific words occur in the text of a specific subject, a $1$ is entered as data point value for that variable.  Each of the words that are not contained in the text for that subject, receives a $0$ as data point value.
+
+## The dataset
+
+The `dataset_imdb` dataset can be downloaded by `Keras`.  This is not a normal dataset as would exist in  a spreadsheet file.  Not only does it contain the mentioned $50000$ text samples, but also a list of common words.   During the download of the dataset, the number of words that will be used as the feature variables can be specified.  In the code chunk below, `5000` common words will be selected.
+
+```{r dataset}
+num_words <- 5000
+imdb <- dataset_imdb(num_words = num_words)
+```
+
+The dataset as downloaded contains $25000$ training and $25000$ test subjects.  Note that this train-test split is not the norm and should not be used in general.  In the code chunk below, each of the two parts are split into feature and target sets.
+
+```{r train_test_split}
+c(train_data, train_labels) %<-% imdb$train
+c(test_data, test_labels) %<-% imdb$test
+```
+
+## Multi-hot-encoding
+
+The introduction to this chapter alluded to the use of _multi-hot-encoding_.  Whereas the _one-hot-encoding_ in introduced before had an in-built function, `to_categorical`, a user-function must be created for multi-hot-encoding.
+
+```{r multi_hot_encoding_function}
+multi_hot_sequences <- function(sequences, dimension) {
+  multi_hot <- matrix(0, nrow = length(sequences), ncol = dimension)
+  for (i in 1:length(sequences)) {
+    multi_hot[i, sequences[[i]]] <- 1
+  }
+  multi_hot
+}
+```
+
+The `train_data` and `test_data` feature set objects are multi-hot-encoded below.
+
+```{r multi_hot_encode_data}
+train_data <- multi_hot_sequences(train_data, num_words)
+test_data <- multi_hot_sequences(test_data, num_words)
+```
+
+To illustrate the concept of multi-hot-encoding, the features $1$ through $10$ of the first subject of the `test_data` object is shown.
+
+```{r demonstrating multi hot encoding}
+test_data[1, 1:10]
+```
+This subject had all of the $10$ most common words in it, except for word number three.
+
+## Baseline model
+
+This dataset was chosen because a normal densely connected neural network will demonstrate high variance.  The code below creates a model called `baseline_model`.  It contains two hidden layers with `16` nodes each.  Both layers have the rectified linear unit (ReLU) as activation function.  The output layer is a single node with the logistic sigmoid function as activation function.  This will output a value in the domain $\left[ 0,1 \right]$.  This will work well, since the target variable is encoded as $0$ and $1$.  Note that this is a different  form of constructing the output as the one-hot-encoding seen before.
+
+ADAM is used a optimizer and binary cross entropy is used as the loss function.  There concepts will be discussed in a following chapter.
+
+```{r baseline model}
+baseline_model <- 
+  keras_model_sequential() %>%
+  layer_dense(units = 16, activation = "relu", input_shape = num_words) %>%
+  layer_dense(units = 16, activation = "relu") %>%
+  layer_dense(units = 1, activation = "sigmoid")
+
+baseline_model %>% compile(
+  optimizer = "adam",
+  loss = "binary_crossentropy",
+  metrics = list("accuracy")
+)
+
+baseline_model %>% summary()
+```
+
+The training data and training target as now fed through the network.  The mini-batch size is `512` and there are `20` epochs.  The test set and its target is used as validation sets.
+
+```{r fit baseline model, message=FALSE, warning=FALSE}
+baseline_history <- baseline_model %>% fit(
+  train_data,
+  train_labels,
+  epochs = 20,
+  batch_size = 512,
+  validation_data = list(test_data, test_labels),
+  verbose = 2
+)
+```
+
+When this code is executed in RStudio, the high variance is clearly seen.  In an attempt to lessen this overfitting a smaller model is used below.  There are only four nodes in each of the two hidden layers.  The rest of the hyperparameters are the same.  The two code chunks below create the model and then train it.
+
+```{r smaller model}
+smaller_model <- 
+  keras_model_sequential() %>%
+  layer_dense(units = 4, activation = "relu", input_shape = num_words) %>%
+  layer_dense(units = 4, activation = "relu") %>%
+  layer_dense(units = 1, activation = "sigmoid")
+
+smaller_model %>% compile(
+  optimizer = "adam",
+  loss = "binary_crossentropy",
+  metrics = list("accuracy")
+)
+
+smaller_model %>% summary()
+```
+
+```{r fit smaller model, message=FALSE, warning=FALSE}
+smaller_history <- smaller_model %>% fit(
+  train_data,
+  train_labels,
+  epochs = 20,
+  batch_size = 512,
+  validation_data = list(test_data, test_labels),
+  verbose = 2
+)
+```
+
+A much bigger network with `512` nodes in each of the two hidden layers is created below.  This creates more learning capacity, but also more overfitting.
+
+```{r bigger model}
+bigger_model <- 
+  keras_model_sequential() %>%
+  layer_dense(units = 512, activation = "relu", input_shape = num_words) %>%
+  layer_dense(units = 512, activation = "relu") %>%
+  layer_dense(units = 1, activation = "sigmoid")
+
+bigger_model %>% compile(
+  optimizer = "adam",
+  loss = "binary_crossentropy",
+  metrics = list("accuracy")
+)
+
+bigger_model %>% summary()
+```
+
+```{r fit bigger model, message=FALSE, warning=FALSE}
+bigger_history <- bigger_model %>% fit(
+  train_data,
+  train_labels,
+  epochs = 20,
+  batch_size = 512,
+  validation_data = list(test_data, test_labels),
+  verbose = 2
+)
+```
+
+A simple line chart is created using the `plotly` package.  __Figure 1__ compares the losses of the training and validation sets for each of the three models.  Note the high variance.
+
+```{r plotting models}
+compare_cx <- data.frame(
+  baseline_train = baseline_history$metrics$loss,
+  baseline_val = baseline_history$metrics$val_loss,
+  smaller_train = smaller_history$metrics$loss,
+  smaller_val = smaller_history$metrics$val_loss,
+  bigger_train = bigger_history$metrics$loss,
+  bigger_val = bigger_history$metrics$val_loss
+) %>%
+  rownames_to_column() %>%
+  mutate(rowname = as.integer(rowname)) %>%
+  gather(key = "type", value = "value", -rowname)
+  
+p <- plot_ly(compare_cx,
+             x = ~rowname,
+             y = ~value,
+             color = ~type,
+             type = "scatter",
+             mode = "lines") %>% 
+  layout(title = "<b>Fig 1</b> Comparing model losses",
+         xaxis = list(title = "Epochs"),
+         yaxis = list(title = "Loss"))
+p
+```
+
+With such high variance either $\ell_2$-regularization or dropout can be implemented to try and reduce the overfitting.
+
+## $\ell_2$-regularization
+
+The `l2_model` model created below has regularization implemented in both hidden layers.  There are various ways to write the code for this.  The simplest was specified regularization as an argument to the specified layer.  The value for $\lambda$ is also specified.
+
+```{r l2model}
+l2_model <- 
+  keras_model_sequential() %>%
+  layer_dense(units = 16, activation = "relu", input_shape = num_words,
+              kernel_regularizer = regularizer_l2(l = 0.001)) %>%
+  layer_dense(units = 16, activation = "relu",
+              kernel_regularizer = regularizer_l2(l = 0.001)) %>%
+  layer_dense(units = 1, activation = "sigmoid")
+
+l2_model %>% compile(
+  optimizer = "adam",
+  loss = "binary_crossentropy",
+  metrics = list("accuracy")
+)
+
+l2_model %>% summary()
+```
+
+```{r fit l2 model, message=FALSE, warning=FALSE}
+l2_history <- l2_model %>% fit(
+  train_data,
+  train_labels,
+  epochs = 20,
+  batch_size = 512,
+  validation_data = list(test_data, test_labels),
+  verbose = 2
+)
+```
+
+__Figure 2__ below shows the difference in variance between the baseline and the new model.
+
+```{r plotting baseline vs regularization}
+compare_cx <- data.frame(
+  baseline_train = baseline_history$metrics$loss,
+  baseline_val = baseline_history$metrics$val_loss,
+  l2_train = l2_history$metrics$loss,
+  l2_val = l2_history$metrics$val_loss
+) %>%
+  rownames_to_column() %>%
+  mutate(rowname = as.integer(rowname)) %>%
+  gather(key = "type", value = "value", -rowname)
+  
+p <- plot_ly(compare_cx,
+             x = ~rowname,
+             y = ~value,
+             color = ~type,
+             type = "scatter",
+             mode = "lines") %>% 
+  layout(title = "<b>Fig 2</b> Comparing baseline and regularization model losses",
+         xaxis = list(title = "Epochs"),
+         yaxis = list(title = "Loss"))
+p
+```
+
+## Dropout
+
+Dropout is implemented in the model below.  It is added a separate layer following each of the hidden layers.  The value for $\kappa$ is set at `0.6`.
+
+```{r dropout model}
+dropout_model <- 
+  keras_model_sequential() %>%
+  layer_dense(units = 16, activation = "relu", input_shape = num_words) %>%
+  layer_dropout(0.6) %>%
+  layer_dense(units = 16, activation = "relu") %>%
+  layer_dropout(0.6) %>%
+  layer_dense(units = 1, activation = "sigmoid")
+
+dropout_model %>% compile(
+  optimizer = "adam",
+  loss = "binary_crossentropy",
+  metrics = list("accuracy")
+)
+
+dropout_model %>% summary()
+```
+
+```{r fit dropout model, message=FALSE, warning=FALSE}
+dropout_history <- dropout_model %>% fit(
+  train_data,
+  train_labels,
+  epochs = 20,
+  batch_size = 512,
+  validation_data = list(test_data, test_labels),
+  verbose = 2
+)
+```
+
+__Figure 3__ shows the difference in variance between the baseline and the dropout models.
+
+```{r plotting baseline vs dropout}
+compare_cx <- data.frame(
+  baseline_train = baseline_history$metrics$loss,
+  baseline_val = baseline_history$metrics$val_loss,
+  dropout_train = dropout_history$metrics$loss,
+  dropout_val = dropout_history$metrics$val_loss
+) %>%
+  rownames_to_column() %>%
+  mutate(rowname = as.integer(rowname)) %>%
+  gather(key = "type", value = "value", -rowname)
+  
+p <- plot_ly(compare_cx,
+             x = ~rowname,
+             y = ~value,
+             color = ~type,
+             type = "scatter",
+             mode = "lines") %>% 
+  layout(title = "<b>Fig 3</b> Comparing baseline and dropout model losses",
+         xaxis = list(title = "Epochs"),
+         yaxis = list(title = "Loss"))
+p
+```
+
+## Comparing regularization and dropout
+
+As a final comparison, __Figure 4__ below shows the difference in loss between $ell_2$ regularization and dropout.
+
+```{r plotting regularization dropout}
+compare_rd <- data.frame(
+  l2_train = l2_history$metrics$loss,
+  l2_val = l2_history$metrics$val_loss,
+  dropout_train = dropout_history$metrics$loss,
+  dropout_val = dropout_history$metrics$val_loss
+) %>%
+  rownames_to_column() %>%
+  mutate(rowname = as.integer(rowname)) %>%
+  gather(key = "type", value = "value", -rowname)
+  
+p <- plot_ly(compare_rd,
+             x = ~rowname,
+             y = ~value,
+             color = ~type,
+             type = "scatter",
+             mode = "lines") %>% 
+  layout(title = "<b>Fig 4</b> Comparing regularization and dropout model losses",
+         xaxis = list(title = "Epochs"),
+         yaxis = list(title = "Loss"))
+p
+```
+
+Note that the choice of architecture and hyperparameters shown in this chapter are unique to this dataset.  Architecture and hyperparameter choices are not transferable in any meaningful way and the designer of a neural network must work hard at getting these correct in every new problem.  Some guidelines and experience do help, but there is no escaping a sometimes long and arduous road to the best performing model.
+
+## Conclusion
+
+This chapter showed the implementation of $\ell_2$-regularization and dropout and their effect on high variance.

@@ -1,0 +1,66 @@
+---
+title: "Dropout"
+author: "Dr Juan H Klopper"
+output:
+  html_document:
+    toc: true
+    number_sections: false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+<style type="text/css">
+h1 {
+    color:#1a2451;
+}
+h2 {
+    color:#ffbd4a;
+}
+h3 {
+    color:#1a2451;
+}
+</style>
+
+![](KRG elegant logo for light BG.png)
+
+## Introduction
+
+Another method to reduce high variance, where the network _fits_ the training set too well (thereby not generalizing to a test set or real-world data) is _dropout_.
+
+Dropout can be viewed as a form of regularization, whereby the network is forced to be _simpler_, thereby constraining the hypothesis space.  As such, and similar to regularization, this technique must only be implemented when there is overfitting.
+
+## Dropout
+
+Dropout _removes_ some nodes at random during each epoch of training.  This removal is done by setting the node value to $0$ and by scaling up non-zero valued nodes.  Note that the zero values are used during forward propagation and backpropagation.
+
+There are a variety of ways to implement dropout.  This chapter describes the common method of _inverted dropout_.
+
+###  Inverted dropout
+
+This technique creates an vector of similar size to the number of nodes in a layer.  Each of the elements in this vector will be either $0$ or $1$, with these values assigned at random given a probability for each.  
+
+The code for this technique usually involves creating a random real number in the domain $\left[ 0,1 \right]$.  A threshold is set, i.e. $0.2$.  If the random real number is less than the threshold, then the node value becomes $0$, whereas if the value is equal to or greater than $0.2$, then the node value becomes $1$.
+
+This value of $0.2$ used above is actually subtracted from $1$, i.e. $1 - 0.2 = 0.8$.  The latter is known as the _keep probability_, denoted in this text by $\kappa$.
+
+Element-wise multiplication then takes place between this vector containing zeros and ones and the vector of node values (after activation).
+
+The last step, which denotes this technique as inverted dropout, divides each element by $\kappa$.  Because the layer created by dropout is reduced to the $\kappa$ value, it must be _increased_ so as to maintain the expected value for the next layer, i.e. no scaling is required during activation.
+
+Remember that a node receives various inputs, which are the sums of various node-weight-value multiplications.  With some of them removed, the sum total will be less and hence activation, i.e. using a rectified linear unit function, will results in a different output value.
+
+![](Dropout.png)
+
+It should also be intuitive to see that reliance on a specific input, which might lead to high variance, is removed due to the fact that the specific input might _disappear_.  The effect is the same as $\ell_2$-regularization seen in the preceding chapter, where the value of some weights were _driven_ to approach $0$.  In this sense, the values of $\kappa$ and $\lambda$ play the same role.
+
+The value of $\kappa$ can be different for each layer.  In general, it is set lower for layers with a higher number of parameters.  With more parameters comes a greater chance of overfitting.
+
+Input features can also have dropout, although this is usually not implemented.
+
+Dropout by its nature creates a cost function that is not  well-defined.  The result of this is that a graph which should show a steady decline in the cost function is no longer possible.  In practice this might require the execution of training without dropout to ensure that the network performs properly (as indicated by a monotonically decreasing cost function value).  Once this has been established, the dropout can be implemented in an attempt to reduce overfitting.
+
+## Conclusion
+
+Dropout is a regularization technique.  It is used when overfitting of the training set exists.  By randomly _removing_ nodes, the hypothesis space is reduced due to the creation of a simpler network.  Success is measured by a better fit to the test set or real-world data.
