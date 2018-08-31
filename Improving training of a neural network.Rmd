@@ -1,0 +1,211 @@
+---
+title: "Improvement techniques in neural network training"
+author: "Dr Juan H Klopper"
+output:
+  html_document:
+    toc: true
+    number_sections: false
+---
+
+<style type="text/css">
+h1 {
+    color:#1a2451;
+}
+h2 {
+    color:#ffbd4a;
+}
+h3 {
+    color:#1a2451;
+}
+</style>
+
+![](KRG elegant logo for light BG.png)
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libraries, message=FALSE, warning=FALSE}
+library(plotly)
+```
+
+## Introduction
+
+Creating the best deep neural network model is an empirical and iterative process that works best on big datasets.  Being empirical, iterative, and requiring big datasets, unfortunately, takes its toll on computer resources and time.
+
+It is therefor important to take steps to mitigate this triad of time and resource consumption.  This chapter discusses some of the steps that can be implemented to reduce the burden of creating a good model.
+
+## Normalizing the input features
+
+In many cases, the scale of the input features vary greatly.  Where some variables might have data point values consisting of small integers, others might have values that range up to a hundred or a thousand.
+
+Scaling the data point values for each feature variable to a similar scale improves training by altering the cost function such that gradient descent becomes easier.
+
+This can be visualized when considering only two variables in a cost function.  If one has very large values and the other has small values, then the resultant 3D graph will be very elongated (in the axis of the large values).  Gradient descent must now find a long convoluted way of _traveling_ down this gradient.
+
+By creating a similar, small scale for each of the feature variables, the graph of the cost function variable becomes more _uniform_.
+
+Scaling is most often achieved through normalization, perhaps more properly referred to as standardization.  A mean and a variance is calculated for each feature variable in the training set.  Each element of each feature variable  then has the specific mean for that variable subtracted from it, with the result divided by the variance for that variable, as shown in equation (1).
+
+$$\frac{x_i - \mu}{\sigma^2} \tag{1}$$
+
+The values for $\mu$ and $\sigma$ for each variable in the training set is retained and used to normalize the features in the test set too.  This is an important step.  It is incorrect to use and overall $\mu$ and $\sigma$ for the training and test sets and it is also incorrect to use a separate $\mu$ and $\sigma$ for the test set.
+
+## Vanishing and exploding gradients
+
+Consider the multiplication of two rational numbers in the domain $\left( 0,1 \right)$.  A few examples are shown in equation (2).
+
+$$\frac{1}{2} \times \frac{2}{3} = \frac{1}{3} \\  \frac{1}{4} \times \frac{9}{10} = \frac{9}{40} \\ \frac{a}{b} \times \frac{c}{d} = \frac{ac}{bd}, \forall a < b, c < d,\left\{a,b,c,d\right\}\in\mathbb{Z}^+ \tag{2}$$
+
+With these constraints it can be shown that the inequalities in equation (3) hold.
+
+$$\left( \frac{a}{b} < \frac{ac}{bd} \right) \wedge \left( \frac{c}{d}<\frac{ac}{bd} \right) \tag{2}$$
+
+If biases are omitted for the sake of simplicity and with a linear activation function $g \left( z \right) = z$, $\hat{y}$ can be calculated as shown in equation (3).
+
+$$W^{\left[ l \right]} \cdot W^{\left[ l-1 \right]} \cdot W^{\left[ l-2 \right]} \cdot \ldots \cdot W^{\left[ 2 \right]} \cdot W^{\left[ 1 \right]} \cdot x \tag{3}$$
+
+With appropriate dimensions and with weight values in the domain $\left( 0,1 \right)$, $W$, will have element values approaching zero as $l$ increases.  In other words, given a sufficiently deep network, there is the threat of the values of the weights (parameters) approaching zero.  This is known as the _vanishing gradient problem_.
+
+By a similar argument and for all weight values larger than $1$, the parameters will increase in size, known as the _exploding gradient problem_.
+
+A similar argument yet again holds for the derivatives during gradient descent (backpropagation).
+
+The problem of small weights is compounded by the relatively slower gradient descent which in turn might take many epochs to converge.
+
+A _partial_ solution lies in the random selection of the initial weight values.  The goal is to set the variance of the weight matrix to the reciprocal of the number of input nodes which is to be multiplied by that matrix.  (When using the rectified linear unit activation (ReLU) function, $\frac{2}{n}$, where $n$ is the number of input nodes, is a better choice.)
+
+Setting the variance of a matrix to $\frac{2}{n}$ (for ReLU) is achieved by multiplying each element in the matrix by the square root of $\frac{2}{n}$.  For tanh activation $\frac{1}{n}$ is used.  This is known as _Xavier initialization_.  Note that this is no longer commonly used as ReLu has supplanted the hyperbolic tangent function, `tanh`, as popular activation function.
+
+## Mini-batch gradient descent
+
+Datasets can have many features and millions of samples.  To take a single step during gradient descent requires the completion of an entire epoch.
+
+The process of gradient descent can be _hastened_ if the training sample set can be broken up into parts, called _mini-batches_.  During an epoch, gradient descent can take place after each mini-batch so that at the end of the epoch, a lot of progress can potentially be made.  The process of forward propagation and backpropagation takes place during each mini-batch process.  An epoch still refers to completing all of the mini-batches.
+
+The term _batch_ refers to the complete training set.  Note, though, that in code, the argument *batch_size = * is used.  This actually refers to the mini-batch sample size.
+
+The extreme form of mini-batch size is $1$.  Every sample in the training dataset is its own mini-batch.  The gradient descent that results is called _stochastic gradient descent_.  
+
+In practice the ideal mini-batch size lies somewhere in between the extremes of using the whole batch and using a single sample.  As a rule of thumb, the whole dataset can be used when it is relatively small and will not penalize the overall time taken to converge to a minimum value for the cost function.  For bigger datasets, a power of $2$ such as $16,32,64,128,256,512$ is useful as mini-batch size.  In most cases this works well with computer memory architecture and optimizes its use.  Irrespective of the size used, it is important that it fits within the memory allocation of the central processing unit (CPU) or graphical processing unit (GPU) of the computer.
+
+## Gradient descent with momentum
+
+Gradient descent with _momentum_ uses the concept of an exponentially weighted moving average to increase the rate of gradient descent.  Instead of updating the parameters during backpropagation with the usual learning rate times the partial derivative of the specific parameter, note is kept of these partial derivatives.  An _exponentially weighted moving average_ (EWMA) is calculated which is then instead multiplied by the learning rate.
+
+An EWMA considers sequential values and calculates a moving average along each of the values such that there is an exponential decay in how previous values in the sequence contributes to the current average.
+
+The code chunk below creates data point values along the $x$-axis and then calculates the sine of each of these values for the $y$-axis, but adds some random noise and the integer $1$ to each value.
+
+```{r Creating values for a sine curve with random noise}
+x = seq(from = 0, to = 2*pi, by = pi/180)
+y = sin(x) + rnorm(length(x), mean = 0, sd = 0.1) + 1
+```
+
+__Figure 1__ below shows the sine curve and the data with noise.
+
+```{r Sine function, fig.cap="Fig 1 Random noise along sine curve"}
+f1 <- plot_ly(x = x,
+             y = y,
+             name = "data",
+             type = "scatter",
+             mode = "markers") %>% 
+  add_trace(x = x,
+            y = sin(x) + 1,
+            name = "sine",
+            type = "scatter",
+            mode = "lines") %>% 
+  layout(title = "Data point values along sine curve",
+         xaxis = list(title = "Input values"),
+         yaxis = list(title = "Output values"))
+f1
+```
+
+For a given coefficient, $\beta$, a moving average, $v_i$, over each of the output values $y_i$, is given in equation (1).
+
+$$v_i = \beta \times v_{i-1} + \left( 1 - \beta \right) \times y_i \tag{1}$$
+
+The code chunk below uses a for loop over the output values.  __Figure 2__ shows the EWMA for $\beta = 0.9$.
+
+```{r Added EWMA, fig.cap="Added EWMA"}
+N <- length(x)
+beta <- 0.9
+v <- vector(length = N)
+for (i in 2:N){
+  v[i] <- (beta * v[i - 1]) + ((1 - beta) * y[i])
+}
+f1 <- f1 %>% add_trace(x = x,
+                       y = v,
+                       name = "EWMA",
+                       type = "scatter",
+                       mode = "lines")
+f1
+```
+
+Note the initial start at zero and the time taken to _catch up_.  This is usually of no consequence in deep neural network training as training will occur over many epochs.
+
+Expansion of equation (1) for a specific value for $\beta$ and some $i \in \mathbb{N}$ shows that the number of previous data points over which the average is computed is approximately given in equation (2).
+
+$$\approx \frac{1}{1 - \beta^i}\tag{2}$$
+
+The effect of an EWMA is that gradient descent orthogonal (in higher dimensional space) to the idealized direction to be taken are averaged out over time, but those in the correct direction become additive, hence the term _momentum_, i.e. gradient descent _builds up momentum in the right direction_.
+
+Equation (3) below shows that instead of the partial derivative of the weight being stored, it is updated as an exponential moving average for some coefficient $\beta \in \left[ 0,1 \right]$.  
+
+$$V_{\partial W_{i}} = \beta_v V_{\partial W_{i-1}} + \left( 1 - \beta_v \right) \partial W_{i} \tag{3}$$
+
+This exponential moving average update of the derivative is then used to update the weight as shown in equation (4).
+
+$$W_{i} = W_{i-1} \times \alpha V_{\partial W_{i-1}} \tag{4}$$
+
+## Root mean square propagation
+
+_Root mean square propagation_ (RMSprop) also attempts to speed up gradient descent.  It differs from momentum by squaring the value of the derivative in each iteration.  The change in equations (3) and (4) are reflected in equation (5).
+
+$$S_{\partial W_{i}} = \beta_s S_{\partial W_{i-1}} + \left( 1 - \beta_s \right) \partial W_{i}^2 \\ W_{i} = W_{i-1} \times \alpha \frac{\partial W_{i-1}}{\sqrt{S_{\partial W_{i-1}}}} \tag{5}$$
+
+## Combining momentum and root mean square propagation
+
+One of the most widely used optimization algorithms for gradient descent combines momentum and RMSprop into _adapative moment estimation_ (ADAM).
+
+One addition to the combination to these two algorithms is the correction of bias that exists at the start of exponentially weighted moving average calculations.  For any iteration, $t$, in this calculation the current average is simply divided as shown in equation (6).
+
+$$\rho_{\partial W}^{\text{corrected}} = \frac{\rho_{\partial W}}{1 - \beta^t}\tag{6}$$
+
+Here $\rho$ refers to either $V$ as for momentum or $S$ as for RMSprop.  This corrects for small values of $t$, but for larger values of $t$ the denominator approaches $1$ and makes very little difference.  
+
+The parameter update is shown in equation (7).
+
+$$W_{i+1} = W_{i} \times \alpha \frac{V_{\partial W_i}^{\text{corrected}}}{\sqrt{S_{\partial W_i}^{\text{corrected}}}} \tag{7}$$
+
+Note that ADAM requires the setting of hyperparameters $\alpha$, $\beta_v$, and $\beta_s$.  Typical values include $\beta_v = 0.9$ and $\beta_s = 0.999$.
+
+## Learning rate decay
+
+As the values of the parameters converge to a minimum, a smaller learning rate can prevent _overshoot_.  Equation (8) shows how to decrease the value of the learning rate, $\alpha$, at a decay rate, $\eta$, over each epoch, $\mathscr{E}$.
+
+$$\alpha_{\mathscr{H+1}} = \frac{1}{1 + \eta \left(\mathscr{H+1}\right)} \alpha_{\mathscr{H}}\tag{8}$$
+
+The decay rate, $\eta$, is another hyperparameter that must be set.
+
+Note that there are a number of other decay types such as exponential decay and staircase decay.
+
+## Batch normalization
+
+Just as with normalizing the input variables, the values of each of the nodes in a hidden layer can also be normalized.  This is referred to as _batch normalization_.
+
+It is most common to normalize the values of the nodes in a layer before applying the activation function, although normalization after applying the activation is also possible.
+
+In standard form, every node value $z^{\left( i \right)}$ is shown in equation (9).
+
+$$z_{\text{norm}}^{\left( i \right)} = \frac{z^{\left( i \right)} - \mu}{\sigma}\tag{9}$$
+
+The distribution parameters, $\mu$ and $\sigma$ used for this normalization can be turned into learnable parameters by equation (10).
+
+$$\tilde{z}^{\left( i \right)} = \gamma z_{\text{norm}}^{\left( i \right)} + \beta\tag{10}$$
+
+## Conclusion
+
+There are a variety of methods to improve the training of a network.  These unfortunately bring a plethora of hyperparameters and network setups that take time, vigilance, and experience to implement.
+
+The use of the improvements to a network is mathematically complex, but easy to express in code.  TensorFlow and other neural network platforms have built-in function that executes all the ideas mentioned in this chapter.
