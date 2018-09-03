@@ -59,7 +59,7 @@ $$\frac{1}{2} \times \frac{2}{3} = \frac{1}{3} \\  \frac{1}{4} \times \frac{9}{1
 
 With these constraints it can be shown that the inequalities in equation (3) hold.
 
-$$\left( \frac{a}{b} < \frac{ac}{bd} \right) \wedge \left( \frac{c}{d}<\frac{ac}{bd} \right) \tag{2}$$
+$$\left( \frac{a}{b} > \frac{ac}{bd} \right) \wedge \left( \frac{c}{d}>\frac{ac}{bd} \right) \tag{2}$$
 
 If biases are omitted for the sake of simplicity and with a linear activation function $g \left( z \right) = z$, $\hat{y}$ can be calculated as shown in equation (3).
 
