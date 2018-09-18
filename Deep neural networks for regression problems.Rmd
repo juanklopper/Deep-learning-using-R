@@ -1,0 +1,215 @@
+---
+title: "Deep neural networks for regression problems"
+author: "Dr Juan H Klopper"
+output:
+  html_document:
+    toc: true
+    number_sections: false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+setwd(getwd())
+```
+
+```{r library import, message=FALSE, warning=FALSE}
+library(readr)
+library(keras)
+library(plotly)
+```
+
+<style type="text/css">
+h1 {
+    color:#1a2451;
+}
+h2 {
+    color:#ffbd4a;
+}
+h3 {
+    color:#1a2451;
+}
+</style>
+
+![](KRG elegant logo for light BG.png)
+
+## Introduction
+
+Unlike classification problems where the target variable is categorical in nature, regression problems have numerical variables as target.
+
+This chapter creates a deep neural network to predict a numerical outcome.
+
+## Data
+
+The dataset contains simulated data.  There are $4898$ samples over $10$ feature variables and a single target variable.  This data is saved in a `.csv` file in the same folder as this `R` markdown file.
+
+```{r data import, message=FALSE, warning=FALSE}
+data.set <- read_csv("RegressionData.csv",
+                     col_names = FALSE)
+```
+
+The dimensions are confirmed below.
+
+```{r dimensions of the dataset}
+dim(data.set)
+```
+
+### Transformation into a matrix
+
+The data structure is transformed into a _mathematical_ matrix using the `as_matrix()` function before removing the variable (column) names.
+
+```{r}
+# Cast dataframe as a matrix
+data.set <- as.matrix(data.set)
+
+# Remove column names
+dimnames(data.set) = NULL
+```
+
+### Distribution of the target variable
+
+The summary statistics of the target variable is shown below.
+
+```{r summary of target variable}
+summary(data.set[, 11])
+```
+
+This can be represented as a histogram, as is shown in __figure 1__ below.
+
+```{r target variable histogram, fig.cap="<b>Fig 1</b> Histogram of the target variable"}
+f1 <- plot_ly() %>% 
+  add_histogram(x = ~data.set[, 11],
+                name = "Target variable") %>% 
+  layout(title = "Target variable",
+         xaxis = list(title = "Values",
+                      zeroline = FALSE),
+         yaxis = list(title = "Count",
+                      zeroline = FALSE))
+f1
+```
+
+Note that the values range from $3$ to $9$, with the data point values approaching a normal distribution.
+
+### Train and test split
+
+The dataset, which now exists as a matrix, must be split into a training and a test set.  There are various ways in `R` to perform this split.  The method employed in previous chapters is used here.  With such a small dataset, the test set will comprise $20% of the samples.
+
+```{r create index for splitting}
+# Split for train and test data
+set.seed(123)
+indx <- sample(2,
+               nrow(data.set),
+               replace = TRUE,
+               prob = c(0.8, 0.2)) # Makes index with values 1 and 2
+```
+
+```{r splitting the data}
+x_train <- data.set[indx == 1, 1:10]
+x_test <- data.set[indx == 2, 1:10]
+y_train <- data.set[indx == 1, 11]
+y_test <- data.set[indx == 2, 11]
+```
+
+### Normalizing the data
+
+To improve learning, the feature variables must be normalized.  As before, the method of standardization is used.
+
+The mean and standard deviation of the feature variables are calculated and stored in the objects `mean.train` and `sd.train`.  The `apply()` function calculates the required test statistic along the axis required (the `2` indicating each column).  Finally, the `scale()` function performs the standardization.
+
+```{r normalizing the test data}
+mean.train <- apply(x_train,
+                    2,
+                    mean)
+sd.train <- apply(x_train,
+                  2,
+                  sd)
+x_test <- scale(x_test,
+                center = mean.train,
+                scale = sd.train)
+```
+
+The training data is standardized with a simple use of the `scale()` function.
+
+```{r normalizing the train data}
+x_train <- scale(x_train)
+```
+
+## The model
+
+The code below is used to create a densely connected deep neural network with three hidden layers and an output layer.
+
+### Creating the model
+
+Note that there is no activation function for the output layer.  Each hidden layer has $25$ nodes and the rectified linear unit is used as activation function.  Dropout is employed to prevent overfitting.
+
+```{r model}
+model <- keras_model_sequential() %>% 
+  layer_dense(units = 25,
+              activation = "relu",
+              input_shape = c(10)) %>% 
+  layer_dropout(0.2) %>% 
+  layer_dense(units = 25,
+              activation = "relu") %>% 
+  layer_dropout(0.2) %>% 
+  layer_dense(units = 25,
+              activation = "relu") %>% 
+  layer_dropout(0.2) %>% 
+  layer_dense(units = 1)
+```
+
+The summary of the model shows $1626$ learnable parameters.
+
+```{r model summary}
+model %>% summary()
+```
+
+Detailed information that shows all the arguments (including those that were left at their default values) can be viewed with the `get_config()` function.
+
+
+```{r}
+model %>% get_config()
+```
+
+### Compiling the model
+
+Since this is a regression problem, the mean squared error is used as the loss function.  The `rmsprop` optimizer is used, with its default values, i.e. `lr = 0.001, rho = 0.9, epsilon = NULL, decay = 0, clipnorm = NULL, clipvalue = NULL`.  
+
+```{r compiling the model}
+model %>% compile(loss = "mse",
+                  optimizer = optimizer_rmsprop(),
+                  metrics = c("mean_absolute_error"))
+```
+
+### Fitting the data
+
+All that remains, is to fit the data, with $0.1$ of the training data reserved as validation set.  A mini-batch size of $32$ is used.  To avoid overfitting (and prevent an unnecessary long run), early stopping is employed.  The mean absolute error of the validation set is used as callback monitor, with a patience level of five.
+
+```{r fit the model, message=FALSE, warning=FALSE}
+history <- model %>% 
+  fit(x_train,
+      y_train,
+      epoch = 50,
+      batch_size = 32,
+      validation_split = 0.1,
+      callbacks = c(callback_early_stopping(monitor = "val_mean_absolute_error",
+                                            patience = 5)),
+      verbose = 2)
+```
+
+## Testing the model
+
+The test data can be used to show the loss and the mean absolute error of the model.  The code chunk below creates two object, `loss` and `mae` to hold these values.  The mean absolute error is pasted into a `sprintf()` function using the `paste0()` function.  The `"%.2f"` argument stipulate two decimal places.
+
+```{r}
+c(loss, mae) %<-% (model %>% evaluate(x_test, y_test, verbose = 0))
+
+paste0("Mean absolute error on test set: ", sprintf("%.2f", mae))
+```
+
+## Conclusion
+
+The chapter introduced a model to solve a regression problem.  The following are important notes when dealing with regression models:
+
+1. The feature variables were standardized according to the mean and standard deviation of the test set  
+2. No activation function is used in the output layer  
+3. The mean squared error is a typical loss function in this setting  
+4. The mean absolute error is a useful metric
