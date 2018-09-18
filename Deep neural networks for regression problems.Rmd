@@ -87,7 +87,7 @@ f1 <- plot_ly() %>%
 f1
 ```
 
-Note that the values range from $3$ to $9$, with the data point values approaching a normal distribution.
+Note that the values range from $2.5$ to $9.3$.
 
 ### Train and test split
 
