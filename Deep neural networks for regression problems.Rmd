@@ -156,7 +156,7 @@ model <- keras_model_sequential() %>%
   layer_dense(units = 1)
 ```
 
-The summary of the model shows $1626$ learnable parameters.
+The summary of the model shows $1601$ learnable parameters.
 
 ```{r model summary}
 model %>% summary()
