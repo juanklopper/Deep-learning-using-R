@@ -1,0 +1,114 @@
+---
+title: "Cross-entropy"
+author: "Dr Juan H Klopper"
+output:
+  html_document:
+    toc: true
+    number_sections: false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+<style type="text/css">
+h1 {
+    color:#1a2451;
+}
+h2 {
+    color:#ffbd4a;
+}
+h3 {
+    color:#1a2451;
+}
+</style>
+
+![](KRG elegant logo for light BG.png)
+
+## Introduction
+
+When dealing wig classification problems, a special type of loss function is required.  Whereas it is easy to conceptualize the difference between a numerical predicted and actual value, the same cannot be said for the difference between a predicted and actual categorical data point.
+
+_Cross-entropy_ provides the numerical representation of a category as a numerical value.  The aim of this chapter is to create an understanding of this method.
+
+## Entropy
+
+To understand cross-entropy, we first need to understand _entropy_.  Entropy is a term that stems from physics and expresses the disorder in a system.  Without external energy input, the entropy of a system increases (from order to chaos).  A heap of bricks and bags of cement lying by the side of the road will not, by itself, construct a house.  A house, on the other hand, will slowly decay over time until only cement dust and broken bricks remain.
+
+The idea of entropy can also be used to express an amount of information.  Consider a random set of elements $A=\left\{\text{car},\text{car},\text{car},\text{car},\text{car},\text{car}, \text{bus}, \text{bus}, \text{bus}, \text{bus}, \text{bus},  \text{human},\text{stop sign}\right\}$.  There are $12$ elements.  Imagine repeatedly drawing one of these elements at random.  At each turn, an observer without knowledge of the item can ask a set of questions to gain the ultimate information, which is, the item itself.  The average number of questions that must be asked to determine the selection can be calculated.
+
+The image below shows such a list of questions and how many questions it would take to discover the randomly chosen object. (Questions are in red.)
+
+![](Entropy.png)
+
+By clever decisions, note that with a single question, we can find out if the element chosen was a car.  It takes two question to discover that it was a bus and it takes three questions for both a human and a stop sign.  The structure comes from the probability of choosing any of the elements at random.  They have a distribution of $P\left\{\text{car},\text{bus},\text{human},\text{stop sign}\right\}=\left(\frac{1}{2},\frac{1}{3},\frac{1}{12},\frac{1}{12}\right)$.  Multiplying the relevant number of questions with the probability of the selection is shown below.
+
+```{r Average number of questions}
+1*(1/2)+2*(1/3)+3*(1/12)+3*(1/12)
+```
+
+Entropy in information theory sets the lower bound for this number of questions to gain information.  When simple examples are constructed, the entropy equals the number of questions to be asked, but this not generally so.  The equation for entropy in information gain is given in equation (1).
+
+$$E \left( \underline{d} \right) \tag{1} = - \sum_{i=1}^{k}\left[ p_i \log_{2} \left( p_i \right)  \right]$$
+
+Here, $E$, is the entropy of a vector of elements, $\underline{d}$.  The probability of each of the elements are given as $p_i$.
+
+The code below creates a function to calculate entropy given a vector of values.
+
+```{r Entropy function}
+entropy <- function(d){
+  x <- 0
+  for (i in d){
+    x <- x + (i * log(i, base = 2))
+  }
+  return(-x)
+}
+```
+
+The theoretical minimal average minimum information (called bits or then, number of questions) required for the problem above, can now be calculated.
+
+```{r Entropy of example problem}
+entropy(c(1/2, 1/3, 1/12, 1/12))
+```
+
+## Cross-entropy
+
+Cross - entropy compares the distance between two distributions.  Fortunately, categorical variables are commonly multi-hot-encoded or one-hot-encoded.  Let's then take one-hot-encoding as an example.  The actual target variable data point values might be $y=\left(0,1,0\right)$.  This states that the sample space of the target variable had three elements and that the current sample, was of the second element type.  This is, in fact, a distribution.  The softmax function might give a prediction of $\hat{y}=\left(0.1,0.8,0.1\right)$, another distribution.  We can now use categorical cross-entropy to calculate the difference between these two distributions.  The equation for categorical cross-entropy is given in (2) below.
+
+$$H \left(y, \hat{y} \right)= - \sum_{i=1}^k \left[ y_i \ln \left( \hat{y}_i\right) \right]\tag{2}$$
+
+Note the use of the natural logarithm.  This is just for convenience.  Remember the logarithmic identity given in equation (3) below.
+
+$$\log_{a}b = \frac{\log{b}}{\log{a}}\tag{3}$$
+If $a=2$ as with entropy above, the denominator would simply be $\log{2}$, i.e. a constant.  
+
+For the example of $y$ and $\hat{y}$ above, a function is constructed below.
+
+```{r Cross-entropy}
+cross.entropy <- function(p, phat){
+  x <- 0
+  for (i in 1:length(p)){
+    x <- x + (p[i] * log(phat[i]))
+  }
+  return(-x)
+}
+```
+
+The cross-entropy (difference between the two distributions or the two categorical types) is thus:
+
+```{r Example problem cross-entropy}
+cross.entropy(c(0, 1, 0),
+              c(0.1, 0.8, 0.1))
+```
+
+Note that only the second element contains any value as elements number $1$ and $3$ is the product containing a zero.
+
+The derivative required to do backpropagation and gradient descent is quite simple.  The derivative of the $\ln$ function is given in equation(4).
+
+$$\frac{d}{dz} \log{z} = \frac{1}{z}\tag{4}$$
+
+## Conclusion
+
+Cross-entropy provides an elegant solution for determining the difference between actual and predicted categorical data point values.
+
+
