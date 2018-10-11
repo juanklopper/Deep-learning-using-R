@@ -1,0 +1,193 @@
+---
+title: "Example of a convolutional neural network"
+author: "Dr Juan H Klopper"
+output:
+  html_document:
+    toc: true
+    number_sections: false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Import libraries}
+library(keras)
+```
+
+
+<style type="text/css">
+h1 {
+    color:#1a2451;
+}
+h2 {
+    color:#ffbd4a;
+}
+h3 {
+    color:#1a2451;
+}
+</style>
+
+![](KRG elegant logo for light BG.png)
+
+## Introduction
+
+The classification of images are best managed by convolutional neural networks (CNN).  Before embarking on the use of novel images, it is best to look at the built-in images provided as datasets in Keras.
+
+## The MNIST dataset
+
+The MNIST dataset contains small $ 28 \times 28 $ pixel grey scale images of handwritten digits that have been classified by humans.
+
+This dataset can be directly imported for use.
+
+## Importing the data
+
+The `dataset_mnist()` is built into Keras and can be assigned to a computer variable.
+
+```{r Importing the data from the web}
+mnist <- dataset_mnist()
+```
+
+## Preparing the data
+
+The dataset has already been divided into a training and test set, each with a set of feature variables (the images) and a set or target values.
+
+```{r Splitting the data}
+x_train <- mnist$train$x
+y_train <- mnist$train$y
+x_test <- mnist$test$x
+y_test <- mnist$test$y
+```
+
+The dimensions of the training feature set (the images) is given below.
+
+```{r Dimensions of the training features}
+dim(x_train)
+```
+
+Note that there are $60000$ grey scale images each of pixel size $ 28 \times 28 $.  These values are assigned to computer variable below.
+
+```{r Setting dimensions}
+img_rows <- 28
+img_cols <- 28
+```
+
+These images are not in the the correct _shape_ as tensors, as the number of channels is missing.  This can be corrected for both the training and test sets by using the `array_reshape()` function.  The code below also creates the `input_shape` variable to hold the correct dimensions of the images.
+
+```{r Redefine dimensions to include channel}
+x_train <- array_reshape(x_train,
+                         c(nrow(x_train),
+                           img_rows,
+                           img_cols, 1))
+x_test <- array_reshape(x_test,
+                        c(nrow(x_test),
+                          img_rows,
+                          img_cols, 1))
+input_shape <- c(img_rows,
+                 img_cols, 1)
+```
+
+```{r New dimensions}
+dim(x_train)
+```
+
+As with all neural networks thus far, the data must be normalized.  Since the pixel values represent brigness on a scale from $0$ (black) to $255$ (white), they can all be rescaled by dividing each by the maximum value of $255$.
+
+```{r Transform the brightness values}
+x_train <- x_train / 255
+x_test <- x_test / 255
+```
+
+The sample space of the target variable contains $10$ elements, i.e. there are $10$ classes in the target variable.  these can be one-hot-encoded using the `to_categorical()` function.
+
+```{r One-hot encoding of target variable}
+num_classes = 10
+y_train <- to_categorical(y_train, num_classes)
+y_test <- to_categorical(y_test, num_classes)
+```
+
+The first image in the training set is a $5$ (the count starts at zero).
+
+```{r}
+y_train[1,]
+```
+
+## The model
+
+Below is a simple CNN.  It contains two convolutional layers.  The first has $32$ filters, each of size $ 3 \times 3$ and uses the rectified linear unit activtion function.  The second uses $64$ similarly sized filters and the same activation function.
+
+This is followed by a max pooling layer with a grid size of $ 2 \times 2 $.  Next up is a dropout layer, set to $0.25$.
+
+The last resultant image is flattened before passing through a single densely connected layer with $128$ nodes using the rectified linear unit activation function.  A $0.5$ dropout is used to combat overfitting.  The output layer has $10$ nodes (as there are $10$ classes) and uses the softmax activation function.
+
+### Creating the model
+
+```{r Creating the CNN}
+model <- keras_model_sequential() %>%
+  layer_conv_2d(filters = 32,
+                kernel_size = c(3,3),
+                activation = 'relu',
+                input_shape = input_shape) %>% 
+  layer_conv_2d(filters = 64,
+                kernel_size = c(3,3),
+                activation = 'relu') %>% 
+  layer_max_pooling_2d(pool_size = c(2, 2)) %>% 
+  layer_dropout(rate = 0.25) %>% 
+  layer_flatten() %>% 
+  layer_dense(units = 128,
+              activation = 'relu') %>% 
+  layer_dropout(rate = 0.5) %>% 
+  layer_dense(units = num_classes,
+              activation = 'softmax')
+```
+
+A summary of the model shows $ 1199882 $ learnable parameters.
+
+```{r}
+model %>% summary()
+```
+
+### Compiling
+
+Categorical cross-entropy serves as the loss function.  Adadelta optimizes the gradient descent and accuracy serves as metric.
+
+```{r Compiling the model}
+model %>% compile(
+  loss = loss_categorical_crossentropy,
+  optimizer = optimizer_adadelta(),
+  metrics = c('accuracy')
+)
+```
+
+## Training
+
+A mini-batch size of $128$ will allow the tensors to fit into the memory of the NVidia graphics processing unit of the current machine.  The model will run over $12$ epochs, with a validation split set at $0.2$.
+
+```{r Training the model}
+batch_size <- 128
+epochs <- 12
+
+# Train model
+model %>% fit(
+  x_train, y_train,
+  batch_size = batch_size,
+  epochs = epochs,
+  validation_split = 0.2
+)
+
+```
+
+## Evaluating the accuracy
+
+The model can be evaluated using the test data.
+
+```{r Evaluating the model}
+score <- model %>% evaluate(x_test,
+                            y_test)
+
+cat('Test loss: ', score$loss, "\n")
+cat('Test accuracy: ', score$acc, "\n")
+```
+
+
+
