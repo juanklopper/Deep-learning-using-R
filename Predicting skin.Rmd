@@ -1,0 +1,230 @@
+---
+title: "Predicting skin lesions"
+author: "Dr Juan H Klopper"
+output:
+  html_document:
+    toc: true
+    number_sections: false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+<style type="text/css">
+h1 {
+    color:#1a2451;
+}
+h2 {
+    color:#ffbd4a;
+}
+h3 {
+    color:#1a2451;
+}
+</style>
+
+![](KRG elegant logo for light BG.png)
+
+## Introduction
+
+While it is a simple task to download images that are part of a predesigned dataset, the ultimate goal is to use your own images.  In this file, we take a look at how to classify images of skin lesions as either benign or malignant.  These images are available on Kaggle.
+
+Since images take up a lot of memory, we will also use an image data generator that will load images from a local drive in batches, as and when needed.
+
+## Libraries
+
+We will use the `Keras` library.  Note that this markdown file makes use of `Keras` as of October 2019 (`TensorFlow 2.0`).
+
+```{r}
+setwd(getwd())
+library(keras)
+```
+
+## Path to data
+
+It is important that the data is saved in a particular structure on your hard drive.  You should have separate directories (folders) for the training, validation, and test sets.  In each of these, you should have separate folders for the different classes.  Since we have two classes, `benign` and `malignant`, each of our three directories holds both of these as sub directories.  Make sure that the names of the sub directories are spelled similarly in each of the three directories.
+
+Below, we set a file path to each of the three directories.
+
+```{r}
+train_dir <- file.path("d:", "Kaggle", "R", "skin", "train")
+validation_dir <- file.path("d:", "Kaggle", "R", "skin", "validation")
+test_dir <- file.path("d:", "Kaggle", "R", "skin", "test")
+```
+
+Will will use the number of images in each of the sub directories to counts the steps in our model.
+
+```{r}
+train_benign_dir <- file.path(train_dir, "benign")
+train_malignant_dir <- file.path(train_dir, "malignant")
+
+validation_benign_dir <- file.path(validation_dir, "benign")
+validation_malignant_dir <- file.path(validation_dir, "malignant")
+
+test_benign_dir <- file.path(test_dir, "benign")
+test_malignant_dir <- file.path(test_dir, "malignant")
+```
+
+Below, we find the file counts.
+
+```{r}
+num_train_benign <- length(list.files(train_benign_dir))
+num_train_malignant <- length(list.files(train_malignant_dir))
+
+num_validation_benign <- length(list.files(validation_benign_dir))
+num_validation_malignant <- length(list.files(validation_malignant_dir))
+
+num_test_benign <- length(list.files(test_benign_dir))
+num_test_malignant <- length(list.files(test_malignant_dir))
+
+total_train <- num_train_benign + num_train_malignant
+total_validation <- num_validation_benign + num_validation_malignant
+total_test <- num_test_benign + num_test_malignant
+```
+
+## Data generators
+
+To take the image in batches from a local drive, we set up a generator with the `image_data_generator()` function.  We make use of image augmentation to improve training.
+
+```{r}
+IMG_HEIGHT <- 112  # Small image sizes for demo purposes only
+IMG_WIDTH <- 112
+batch_size <- 4  # Samll batch size for demo purposes only
+```
+
+We set up these generators for the training, validation, and test images.
+
+```{r}
+image_gen_train <- keras::image_data_generator(rescale = 1./255,
+                                               rotation_range = 10,
+                                               width_shift_range = 0.15,
+                                               height_shift_range = 0.15,
+                                               horizontal_flip = TRUE,
+                                               zoom_range = 0.05)
+
+image_gen_validation <- keras::image_data_generator(rescale = 1./255)  # The validation and test images are not augmented
+
+image_gen_test <- keras::image_data_generator(rescale = 1./255)
+```
+
+Now we use the `flow_from_directory()` function.  It will pull the images in batches as needed during training.
+
+```{r}
+train_data_gen <- keras::flow_images_from_directory(train_dir,
+                                                    generator = image_gen_train,
+                                                    batch_size = batch_size,
+                                                    target_size = c(IMG_HEIGHT,
+                                                                    IMG_WIDTH),
+                                                    class_mode = "binary")
+
+validation_data_gen <- keras::flow_images_from_directory(validation_dir,
+                                                         generator = image_gen_validation,
+                                                         batch_size = batch_size,
+                                                         target_size = c(IMG_HEIGHT,
+                                                                         IMG_WIDTH),
+                                                         class_mode = "binary")
+
+test_data_gen <- keras::flow_images_from_directory(test_dir,
+                                                   generator = image_gen_test,
+                                                   batch_size = batch_size,
+                                                   target_size = c(IMG_HEIGHT,
+                                                                   IMG_WIDTH),
+                                                   class_mode = "binary")
+```
+
+## Creating a model
+
+Our model is a simple two convolutional layer model.
+
+```{r}
+model <- keras::keras_model_sequential() %>% 
+  layer_conv_2d(filters = 16,
+                kernel_size = 3,
+                padding = "same",
+                activation = "relu",
+                input_shape = c(IMG_HEIGHT,
+                                IMG_WIDTH,
+                                3)) %>% 
+  layer_max_pooling_2d() %>% 
+
+  layer_dropout(0.2) %>% 
+  layer_conv_2d(filters = 32,
+                kernel_size = 3,
+                padding = "same",
+                activation = "relu") %>% 
+  layer_max_pooling_2d() %>% 
+  layer_dropout(0.2) %>% 
+  layer_flatten() %>% 
+  layer_dense(512,
+              activation = "relu") %>% 
+  layer_dense(1,
+              activation = "sigmoid")
+```
+
+```{r}
+model %>% summary()
+```
+
+```{r}
+model %>% compile(loss = "binary_crossentropy",
+                  optimizer = optimizer_adam(),
+                  metrics = c("accuracy"))
+```
+
+## Training
+
+We now train the model over $10$ epochs, with early stopping.
+
+```{r}
+history <- keras::fit_generator(model,
+                                train_data_gen,
+                                steps_per_epoch = floor(total_train / batch_size),
+                                epochs = 10,
+                                validation_data = validation_data_gen,
+                                validation_steps = floor(total_validation / batch_size),
+                                callbacks = callback_early_stopping(monitor = "val_loss",
+                                                                    min_delta = 0.01,
+                                                                    patience = 4))
+```
+
+## Evaluating the model
+
+We can now use the test image generator to check on our model.
+
+```{r}
+score <- model %>% evaluate_generator(test_data_gen,
+                                      steps = floor(total_test / batch_size))
+```
+
+
+Let's have a look at the accuracy.
+
+```{r}
+cat('Test accuracy: ', score$acc, "\n")
+```
+
+## Saving and reloading the model
+
+We can save this model as in HDF5 format.
+
+```{r}
+model %>% save_model_hdf5("skin.h5")
+```
+
+Reloading is simple.
+
+```{r}
+load_model <- load_model_hdf5("skin.h5")
+load_model %>% summary()
+```
+
+We can use the test set as before.
+
+```{r}
+new_score <- load_model %>% evaluate_generator(test_data_gen,
+                                               steps = floor(total_test / batch_size))
+```
+
+```{r}
+cat('Test accuracy: ', new_score$acc, "\n")
+```
